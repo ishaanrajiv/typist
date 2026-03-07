@@ -220,13 +220,42 @@ textarea {
 }
 
 .prompt-text {
+  padding: 0.9rem 0.95rem;
   min-height: 240px;
   font-family: "IBM Plex Mono", monospace;
-  line-height: 1.86;
+  line-height: 1.58;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
   color: #7d8996;
   font-size: 1.03rem;
+}
+
+.typing-stage {
+  position: relative;
+  display: block;
+  border-radius: 4px;
+  background: var(--input-bg);
+}
+
+.typing-stage:focus-within {
+  background: var(--input-bg-focus);
+}
+
+.prompt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: auto;
+}
+
+.prompt-word {
+  display: inline-block;
+  white-space: pre;
+}
+
+.prompt-space {
+  white-space: pre;
 }
 
 .prompt-char {
@@ -250,30 +279,36 @@ textarea {
   color: var(--bad);
 }
 
-.input-wrap {
-  display: block;
-}
-
 .typing-input {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  min-height: 128px;
+  min-height: 240px;
   resize: vertical;
   border: none;
   border-radius: 4px;
-  background: var(--input-bg);
-  color: var(--text-strong);
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-accent);
   padding: 0.9rem 0.95rem;
   font-family: "IBM Plex Mono", monospace;
   line-height: 1.58;
   outline: none;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: pre-wrap;
 }
 
-.typing-input:focus {
-  background: var(--input-bg-focus);
+.typing-input::selection {
+  background: rgba(242, 244, 248, 0.22);
 }
 
 .typing-input::placeholder {
-  color: var(--text-faint);
+  color: transparent;
+}
+
+.typing-input.is-finished {
+  caret-color: transparent;
 }
 
 .session-actions {
@@ -517,6 +552,12 @@ textarea {
   }
 
   .prompt-text {
+    min-height: 170px;
+    line-height: 1.68;
+    font-size: 0.96rem;
+  }
+
+  .typing-input {
     min-height: 170px;
     line-height: 1.68;
     font-size: 0.96rem;

@@ -4,6 +4,24 @@ import { describe, expect, it } from "vitest";
 import { PromptCanvas } from "./PromptCanvas";
 
 describe("PromptCanvas", () => {
+  it("renders one textbox with overlaid prompt", () => {
+    const { container } = render(
+      <PromptCanvas
+        mode="classic"
+        prompt="steady focus"
+        input=""
+        phase="idle"
+        fontScale={1}
+        textareaRef={createRef<HTMLTextAreaElement>()}
+        onInputChange={() => undefined}
+        onFocusRequest={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
+    expect(container.querySelector(".prompt-overlay")).not.toBeNull();
+  });
+
   it("does not append mid-text inserted characters as overflow", () => {
     const { container } = render(
       <PromptCanvas
@@ -37,5 +55,42 @@ describe("PromptCanvas", () => {
     );
 
     expect(screen.getByLabelText("extra typed characters")).toHaveTextContent("zz");
+  });
+
+  it("renders each word in a non-splitting prompt token", () => {
+    const { container } = render(
+      <PromptCanvas
+        mode="classic"
+        prompt="never split words"
+        input=""
+        phase="idle"
+        fontScale={1}
+        textareaRef={createRef<HTMLTextAreaElement>()}
+        onInputChange={() => undefined}
+        onFocusRequest={() => undefined}
+      />,
+    );
+
+    const words = Array.from(container.querySelectorAll(".prompt-word")).map((element) =>
+      element.textContent?.trim(),
+    );
+    expect(words).toEqual(["never", "split", "words"]);
+  });
+
+  it("preserves explicit newlines in coder prompts", () => {
+    const { container } = render(
+      <PromptCanvas
+        mode="coder"
+        prompt={"const a = 1;\nconst b = 2;"}
+        input=""
+        phase="idle"
+        fontScale={1}
+        textareaRef={createRef<HTMLTextAreaElement>()}
+        onInputChange={() => undefined}
+        onFocusRequest={() => undefined}
+      />,
+    );
+
+    expect(container.querySelectorAll("br").length).toBe(1);
   });
 });

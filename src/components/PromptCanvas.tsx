@@ -13,11 +13,62 @@ type PromptCanvasProps = {
   onFocusRequest: () => void;
 };
 
+type PromptToken =
+  | {
+      type: "word" | "space";
+      text: string;
+      start: number;
+    }
+  | {
+      type: "newline";
+      start: number;
+    };
+
 const toVisibleCharacter = (char: string): string => {
-  if (char === " ") {
-    return "\u00a0";
+  if (char === "\t") {
+    return "    ";
   }
   return char;
+};
+
+const buildPromptTokens = (promptChars: string[]): PromptToken[] => {
+  const tokens: PromptToken[] = [];
+  let index = 0;
+
+  while (index < promptChars.length) {
+    const current = promptChars[index];
+    if (current === "\n") {
+      tokens.push({
+        type: "newline",
+        start: index,
+      });
+      index += 1;
+      continue;
+    }
+
+    const isWhitespace = /\s/.test(current);
+    const start = index;
+    const chars: string[] = [];
+    while (index < promptChars.length) {
+      const candidate = promptChars[index];
+      if (candidate === "\n") {
+        break;
+      }
+      if (/\s/.test(candidate) !== isWhitespace) {
+        break;
+      }
+      chars.push(candidate);
+      index += 1;
+    }
+
+    tokens.push({
+      type: isWhitespace ? "space" : "word",
+      text: chars.join(""),
+      start,
+    });
+  }
+
+  return tokens;
 };
 
 export const PromptCanvas = ({
@@ -31,6 +82,7 @@ export const PromptCanvas = ({
   onFocusRequest,
 }: PromptCanvasProps) => {
   const promptChars = Array.from(prompt);
+  const promptTokens = buildPromptTokens(promptChars);
   const alignment = alignPromptInput(prompt, input, "input");
   const promptStatuses = Array.from({ length: promptChars.length }, () => "");
   const trailingOverflowChars: string[] = [];
@@ -93,30 +145,50 @@ export const PromptCanvas = ({
         <span>{mode}</span>
         <span>{phase === "active" ? "active" : phase === "finished" ? "completed" : "ready"}</span>
       </div>
-      <div className="prompt-text" style={{ fontSize: `${fontScale}em` }}>
-        {promptChars.map((char, index) => {
-          const statusClass = promptStatuses[index] ?? "";
-          return (
-            <span className={`prompt-char ${statusClass}`} key={`${char}-${index}`}>
-              {toVisibleCharacter(char)}
-            </span>
-          );
-        })}
-        {overflow.length > 0 && (
-          <span className="prompt-overflow" aria-label="extra typed characters">
-            {overflow}
-          </span>
-        )}
-      </div>
-
-      <label className="input-wrap">
+      <label className="typing-stage" style={{ fontSize: `${fontScale}em` }}>
         <span className="visually-hidden">Type the prompt text</span>
+        <div className="prompt-text prompt-overlay" aria-hidden="true">
+          {promptTokens.map((token) => {
+            if (token.type === "newline") {
+              return <br key={`line-${token.start}`} />;
+            }
+
+            const rendered = Array.from(token.text).map((char, offset) => {
+              const promptIndex = token.start + offset;
+              const statusClass = promptStatuses[promptIndex] ?? "";
+              return (
+                <span className={`prompt-char ${statusClass}`} key={`${token.start}-${offset}`}>
+                  {toVisibleCharacter(char)}
+                </span>
+              );
+            });
+
+            if (token.type === "word") {
+              return (
+                <span className="prompt-word" key={`word-${token.start}`}>
+                  {rendered}
+                </span>
+              );
+            }
+
+            return (
+              <span className="prompt-space" key={`space-${token.start}`}>
+                {rendered}
+              </span>
+            );
+          })}
+          {overflow.length > 0 && (
+            <span className="prompt-overflow" aria-label="extra typed characters">
+              {overflow}
+            </span>
+          )}
+        </div>
         <textarea
           ref={textareaRef}
           autoCapitalize="off"
           autoComplete="off"
           autoCorrect="off"
-          className="typing-input"
+          className={`typing-input typing-input-overlay ${phase === "finished" ? "is-finished" : ""}`}
           value={input}
           onChange={onInputChange}
           placeholder={phase === "finished" ? "Start a new round to continue." : "Start typing..."}

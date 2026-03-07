@@ -198,6 +198,18 @@ export default function App() {
   }, [duration, finishSession, phase, startedAtPerfMs]);
 
   useEffect(() => {
+    if (settings.mode !== "learn" || phase === "finished") {
+      return;
+    }
+    if (input.length === 0) {
+      return;
+    }
+    if (input === promptBundle.text) {
+      finishSession();
+    }
+  }, [finishSession, input, phase, promptBundle.text, settings.mode]);
+
+  useEffect(() => {
     return () => {
       audioContextRef.current?.close().catch(() => undefined);
     };
