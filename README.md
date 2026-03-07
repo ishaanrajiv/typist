@@ -22,6 +22,8 @@ bun install
 bun run dev
 ```
 
+Open `http://localhost:5173`.
+
 ## Quality checks
 
 ```bash
@@ -47,3 +49,27 @@ src/
 - Session history is capped at `50` entries.
 - Streak data is updated locally by date.
 - Learn mode uses deterministic heuristics, no AI backend.
+
+## Deployment
+
+This app is configured for static deployment on Vercel.
+
+```bash
+bun run build
+```
+
+Build output is in `dist/`.
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+Please follow [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+
+## Security
+
+If you discover a security issue, follow [SECURITY.md](./SECURITY.md).
+
+## License
+
+Licensed under the [MIT License](./LICENSE).

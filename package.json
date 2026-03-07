@@ -1,7 +1,23 @@
 {
   "name": "typist",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.1.0",
+  "description": "Minimalist but thoughtful typing speed test built with Bun, TypeScript, React, and Vite.",
+  "license": "MIT",
+  "author": "Ishaan Rajiv",
+  "keywords": [
+    "typing-test",
+    "typing-speed",
+    "react",
+    "typescript",
+    "bun",
+    "vite"
+  ],
+  "engines": {
+    "bun": ">=1.3.0",
+    "node": ">=20.0.0"
+  },
+  "packageManager": "bun@1.3.10",
   "type": "module",
   "scripts": {
     "dev": "vite",
