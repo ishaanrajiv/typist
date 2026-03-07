@@ -1,5 +1,6 @@
 import { classifyCharacterClass } from "./scoring";
 import type { Insight, KeystrokeEvent } from "../types";
+import { alignPromptInput } from "./alignment";
 
 const isMeaningfulCharacter = (char: string): boolean => char.length > 0;
 
@@ -85,11 +86,13 @@ export const generateLearnInsights = (payload: {
     other: 0,
   };
 
-  for (let index = 0; index < Math.min(payload.prompt.length, payload.input.length); index += 1) {
-    if (payload.prompt[index] === payload.input[index]) {
+  const alignment = alignPromptInput(payload.prompt, payload.input);
+  for (let index = 0; index < alignment.length; index += 1) {
+    const operation = alignment[index];
+    if (operation.type === "match" || operation.promptIndex === null) {
       continue;
     }
-    const className = classifyCharacterClass(payload.prompt[index]);
+    const className = classifyCharacterClass(operation.expected);
     classErrors[className] += 1;
   }
 

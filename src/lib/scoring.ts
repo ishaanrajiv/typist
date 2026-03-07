@@ -6,6 +6,7 @@ import type {
   SessionConfig,
   SessionResult,
 } from "../types";
+import { alignPromptInput } from "./alignment";
 
 const clamp = (value: number, low: number, high: number): number =>
   Math.min(Math.max(value, low), high);
@@ -73,20 +74,28 @@ export const diffInputEvents = (
 };
 
 const evaluateCharacters = (prompt: string, input: string): Omit<LiveMetrics, "grossWpm" | "netWpm" | "tpm" | "accuracy"> => {
-  const limit = Math.min(prompt.length, input.length);
   let correctChars = 0;
   let incorrectChars = 0;
+  let extraChars = 0;
+  let skippedChars = 0;
+  const operations = alignPromptInput(prompt, input);
 
-  for (let index = 0; index < limit; index += 1) {
-    if (prompt[index] === input[index]) {
+  for (let index = 0; index < operations.length; index += 1) {
+    const operation = operations[index];
+    if (operation.type === "match") {
       correctChars += 1;
-    } else {
-      incorrectChars += 1;
+      continue;
     }
+    if (operation.type === "substitute") {
+      incorrectChars += 1;
+      continue;
+    }
+    if (operation.type === "insert") {
+      extraChars += 1;
+      continue;
+    }
+    skippedChars += 1;
   }
-
-  const extraChars = Math.max(0, input.length - prompt.length);
-  const skippedChars = Math.max(0, prompt.length - input.length);
 
   return {
     correctChars,
@@ -207,30 +216,32 @@ const computeCoderAccuracy = (prompt: string, input: string): {
   const symbol = createBucket();
   const identifier = createBucket();
   const whitespace = createBucket();
-  const limit = Math.min(prompt.length, input.length);
-
-  for (let index = 0; index < limit; index += 1) {
-    const expected = prompt[index];
-    const actual = input[index];
-    const className = classifyCharacterClass(expected);
+  const operations = alignPromptInput(prompt, input);
+  for (let index = 0; index < operations.length; index += 1) {
+    const operation = operations[index];
+    if (operation.promptIndex === null) {
+      continue;
+    }
+    const className = classifyCharacterClass(operation.expected);
+    const isCorrect = operation.type === "match";
 
     if (className === "symbol") {
       symbol.total += 1;
-      if (expected === actual) {
+      if (isCorrect) {
         symbol.correct += 1;
       }
     }
 
     if (className === "identifier") {
       identifier.total += 1;
-      if (expected === actual) {
+      if (isCorrect) {
         identifier.correct += 1;
       }
     }
 
     if (className === "whitespace") {
       whitespace.total += 1;
-      if (expected === actual) {
+      if (isCorrect) {
         whitespace.correct += 1;
       }
     }

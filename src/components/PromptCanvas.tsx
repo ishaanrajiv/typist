@@ -1,5 +1,6 @@
 import { type ChangeEvent, type RefObject } from "react";
 import type { AppMode, SessionPhase } from "../types";
+import { alignPromptInput } from "../lib/alignment";
 
 type PromptCanvasProps = {
   mode: AppMode;
@@ -30,8 +31,61 @@ export const PromptCanvas = ({
   onFocusRequest,
 }: PromptCanvasProps) => {
   const promptChars = Array.from(prompt);
-  const inputChars = Array.from(input);
-  const overflow = inputChars.slice(promptChars.length).join("");
+  const alignment = alignPromptInput(prompt, input, "input");
+  const promptStatuses = Array.from({ length: promptChars.length }, () => "");
+  const trailingOverflowChars: string[] = [];
+  const hasFutureInputOp = Array.from({ length: alignment.length }, () => false);
+  let seenInputAhead = false;
+
+  for (let index = alignment.length - 1; index >= 0; index -= 1) {
+    hasFutureInputOp[index] = seenInputAhead;
+    if (alignment[index].inputIndex !== null) {
+      seenInputAhead = true;
+    }
+  }
+
+  for (let index = 0; index < alignment.length; index += 1) {
+    const operation = alignment[index];
+    if (operation.type === "insert") {
+      const nextPromptOp = alignment
+        .slice(index + 1)
+        .find((candidate) => candidate.promptIndex !== null);
+      if (nextPromptOp && promptStatuses[nextPromptOp.promptIndex] === "") {
+        promptStatuses[nextPromptOp.promptIndex] = "is-incorrect";
+      }
+      continue;
+    }
+
+    if (operation.type === "match") {
+      promptStatuses[operation.promptIndex] = "is-correct";
+      continue;
+    }
+
+    if (operation.type === "substitute") {
+      promptStatuses[operation.promptIndex] = "is-incorrect";
+      continue;
+    }
+
+    if (hasFutureInputOp[index]) {
+      promptStatuses[operation.promptIndex] = "is-incorrect";
+    }
+  }
+
+  for (let index = alignment.length - 1; index >= 0; index -= 1) {
+    const operation = alignment[index];
+    if (operation.type !== "insert") {
+      break;
+    }
+    trailingOverflowChars.push(operation.actual);
+  }
+  trailingOverflowChars.reverse();
+
+  const currentIndex = promptStatuses.findIndex((status) => status === "");
+  if (currentIndex >= 0 && phase !== "finished") {
+    promptStatuses[currentIndex] = "is-current";
+  }
+
+  const overflow = trailingOverflowChars.join("");
 
   return (
     <section className="prompt-shell" onClick={onFocusRequest} aria-label="Typing prompt">
@@ -41,12 +95,7 @@ export const PromptCanvas = ({
       </div>
       <div className="prompt-text" style={{ fontSize: `${fontScale}em` }}>
         {promptChars.map((char, index) => {
-          let statusClass = "";
-          if (index < inputChars.length) {
-            statusClass = inputChars[index] === char ? "is-correct" : "is-incorrect";
-          } else if (index === inputChars.length && phase !== "finished") {
-            statusClass = "is-current";
-          }
+          const statusClass = promptStatuses[index] ?? "";
           return (
             <span className={`prompt-char ${statusClass}`} key={`${char}-${index}`}>
               {toVisibleCharacter(char)}

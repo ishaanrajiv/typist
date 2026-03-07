@@ -15,6 +15,7 @@ describe("scoring", () => {
     expect(metrics.correctChars).toBe(4);
     expect(metrics.incorrectChars).toBe(1);
     expect(metrics.extraChars).toBe(1);
+    expect(metrics.skippedChars).toBe(0);
     expect(metrics.accuracy).toBeCloseTo(66.67, 2);
     expect(metrics.netWpm).toBeLessThan(metrics.grossWpm);
   });
@@ -59,5 +60,19 @@ describe("scoring", () => {
     expect(result.correctChars).toBe(2);
     expect(result.incorrectChars).toBe(1);
     expect(result.timeline.length).toBeGreaterThan(0);
+  });
+
+  it("does not cascade errors after a single inserted character", () => {
+    const prompt =
+      "was result with context and daily was it calm daily in time speed practice with p";
+    const input =
+      "was result with context and daily was it calm daily in time speed paractice with";
+
+    const metrics = calculateLiveMetrics(prompt, input, 60_000);
+
+    expect(metrics.incorrectChars).toBe(0);
+    expect(metrics.extraChars).toBe(1);
+    expect(metrics.skippedChars).toBe(2);
+    expect(metrics.correctChars).toBe(prompt.length - metrics.skippedChars);
   });
 });
