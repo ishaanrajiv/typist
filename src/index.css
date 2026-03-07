@@ -55,6 +55,22 @@ textarea {
   gap: 1rem;
 }
 
+.app-shell.is-session-active .control-bar,
+.app-shell.is-session-active .session-actions,
+.app-shell.is-session-active .history-panel,
+.app-shell.is-session-active .result-card {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.app-shell.is-session-active .stat-card {
+  opacity: 0.25;
+}
+
+.app-shell.is-session-active .stat-card.stat-card-timer {
+  opacity: 1;
+}
+
 .control-bar,
 .workspace {
   width: min(100%, 940px);
@@ -221,14 +237,14 @@ textarea {
 
 .prompt-text {
   padding: 0.9rem 0.95rem;
-  min-height: 240px;
+  min-height: 100%;
   font-family: "IBM Plex Mono", monospace;
+  font-size: inherit;
   line-height: 1.58;
   white-space: pre-wrap;
   overflow-wrap: normal;
   word-break: normal;
   color: #7d8996;
-  font-size: 1.03rem;
 }
 
 .typing-stage {
@@ -284,7 +300,7 @@ textarea {
   z-index: 1;
   width: 100%;
   min-height: 240px;
-  resize: vertical;
+  resize: none;
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -293,10 +309,12 @@ textarea {
   padding: 0.9rem 0.95rem;
   font-family: "IBM Plex Mono", monospace;
   line-height: 1.58;
+  font-size: inherit;
   outline: none;
   overflow-wrap: normal;
   word-break: normal;
   white-space: pre-wrap;
+  user-select: none;
 }
 
 .typing-input::selection {
@@ -552,15 +570,13 @@ textarea {
   }
 
   .prompt-text {
-    min-height: 170px;
+    min-height: 100%;
     line-height: 1.68;
-    font-size: 0.96rem;
   }
 
   .typing-input {
     min-height: 170px;
     line-height: 1.68;
-    font-size: 0.96rem;
   }
 
   .result-grid,

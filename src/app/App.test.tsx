@@ -45,4 +45,17 @@ describe("App flow", () => {
 
     expect(await screen.findByRole("heading", { name: "Session Report" })).toBeInTheDocument();
   });
+
+  it("inserts soft tabs inside coder textbox instead of moving focus", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("tab", { name: "Coder" }));
+    const textarea = screen.getByRole("textbox", { name: "Type the prompt text" });
+    await user.type(textarea, "ab");
+    await user.keyboard("[Tab]");
+
+    expect(textarea).toHaveValue("ab  ");
+    expect(textarea).toHaveFocus();
+  });
 });

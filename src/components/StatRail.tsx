@@ -24,7 +24,7 @@ export const StatRail = ({
 }: StatRailProps) => {
   return (
     <aside className="stat-rail" aria-label="Live typing statistics">
-      <div className="stat-card">
+      <div className="stat-card stat-card-timer">
         <span className="stat-label">{timed ? "remaining" : "elapsed"}</span>
         <strong className="stat-value">{formatSeconds(timed ? remainingSeconds : elapsedSeconds)}</strong>
       </div>

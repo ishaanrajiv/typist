@@ -1,4 +1,13 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import { ControlBar } from "../components/ControlBar";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { PromptCanvas } from "../components/PromptCanvas";
@@ -222,12 +231,11 @@ export default function App() {
     }));
   }, []);
 
-  const onInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+  const applyInputValue = useCallback((next: string) => {
     if (phase === "finished") {
       return;
     }
 
-    const next = event.target.value;
     const previous = input;
     if (next === previous) {
       return;
@@ -256,6 +264,33 @@ export default function App() {
     }
 
     setInput(next);
+  }, [elapsedMs, input, phase, playTick, promptBundle.text, startedAtPerfMs]);
+
+  const onInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    applyInputValue(event.target.value);
+  };
+
+  const onInputKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (settings.mode !== "coder" || event.key !== "Tab" || phase === "finished") {
+      return;
+    }
+
+    event.preventDefault();
+    const target = event.currentTarget;
+    const selectionStart = target.selectionStart ?? 0;
+    const selectionEnd = target.selectionEnd ?? selectionStart;
+    const lineStart = target.value.lastIndexOf("\n", Math.max(selectionStart - 1, 0)) + 1;
+    const column = selectionStart - lineStart;
+    const spacesToNextTabStop = column % 4 === 0 ? 4 : 4 - (column % 4);
+    const spaces = " ".repeat(spacesToNextTabStop);
+    const next = `${target.value.slice(0, selectionStart)}${spaces}${target.value.slice(selectionEnd)}`;
+    const nextCursor = selectionStart + spaces.length;
+
+    applyInputValue(next);
+    requestAnimationFrame(() => {
+      target.selectionStart = nextCursor;
+      target.selectionEnd = nextCursor;
+    });
   };
 
   const elapsedSeconds = elapsedMs / 1000;
@@ -270,7 +305,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${phase === "active" ? "is-session-active" : ""}`}>
       <ControlBar
         settings={settings}
         showSettings={showSettings}
@@ -300,6 +335,7 @@ export default function App() {
             fontScale={settings.fontScale}
             textareaRef={typingRef}
             onInputChange={onInputChange}
+            onInputKeyDown={onInputKeyDown}
             onFocusRequest={() => typingRef.current?.focus()}
           />
 

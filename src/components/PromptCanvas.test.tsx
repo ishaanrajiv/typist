@@ -14,6 +14,7 @@ describe("PromptCanvas", () => {
         fontScale={1}
         textareaRef={createRef<HTMLTextAreaElement>()}
         onInputChange={() => undefined}
+        onInputKeyDown={() => undefined}
         onFocusRequest={() => undefined}
       />,
     );
@@ -32,6 +33,7 @@ describe("PromptCanvas", () => {
         fontScale={1}
         textareaRef={createRef<HTMLTextAreaElement>()}
         onInputChange={() => undefined}
+        onInputKeyDown={() => undefined}
         onFocusRequest={() => undefined}
       />,
     );
@@ -50,6 +52,7 @@ describe("PromptCanvas", () => {
         fontScale={1}
         textareaRef={createRef<HTMLTextAreaElement>()}
         onInputChange={() => undefined}
+        onInputKeyDown={() => undefined}
         onFocusRequest={() => undefined}
       />,
     );
@@ -67,6 +70,7 @@ describe("PromptCanvas", () => {
         fontScale={1}
         textareaRef={createRef<HTMLTextAreaElement>()}
         onInputChange={() => undefined}
+        onInputKeyDown={() => undefined}
         onFocusRequest={() => undefined}
       />,
     );
@@ -87,6 +91,7 @@ describe("PromptCanvas", () => {
         fontScale={1}
         textareaRef={createRef<HTMLTextAreaElement>()}
         onInputChange={() => undefined}
+        onInputKeyDown={() => undefined}
         onFocusRequest={() => undefined}
       />,
     );

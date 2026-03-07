@@ -1,4 +1,11 @@
-import { type ChangeEvent, type RefObject } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import type { AppMode, SessionPhase } from "../types";
 import { alignPromptInput } from "../lib/alignment";
 
@@ -10,6 +17,7 @@ type PromptCanvasProps = {
   fontScale: number;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   onInputChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onFocusRequest: () => void;
 };
 
@@ -79,8 +87,11 @@ export const PromptCanvas = ({
   fontScale,
   textareaRef,
   onInputChange,
+  onInputKeyDown,
   onFocusRequest,
 }: PromptCanvasProps) => {
+  const stageRef = useRef<HTMLLabelElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const promptChars = Array.from(prompt);
   const promptTokens = buildPromptTokens(promptChars);
   const alignment = alignPromptInput(prompt, input, "input");
@@ -139,15 +150,45 @@ export const PromptCanvas = ({
 
   const overflow = trailingOverflowChars.join("");
 
+  const syncHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    const stage = stageRef.current;
+    if (!textarea || !stage) {
+      return;
+    }
+
+    const minHeight = Number.parseFloat(window.getComputedStyle(textarea).minHeight) || 0;
+    textarea.style.height = "0px";
+    const typedHeight = textarea.scrollHeight;
+    const promptHeight = overlayRef.current?.scrollHeight ?? 0;
+    const nextHeight = Math.max(minHeight, typedHeight, promptHeight);
+    textarea.style.height = `${nextHeight}px`;
+    stage.style.height = `${nextHeight}px`;
+  }, [textareaRef]);
+
+  useEffect(() => {
+    syncHeight();
+  }, [fontScale, input, prompt, syncHeight]);
+
+  useEffect(() => {
+    const onResize = () => {
+      syncHeight();
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, [syncHeight]);
+
   return (
     <section className="prompt-shell" onClick={onFocusRequest} aria-label="Typing prompt">
       <div className="prompt-meta">
         <span>{mode}</span>
         <span>{phase === "active" ? "active" : phase === "finished" ? "completed" : "ready"}</span>
       </div>
-      <label className="typing-stage" style={{ fontSize: `${fontScale}em` }}>
+      <label ref={stageRef} className="typing-stage" style={{ fontSize: `${(fontScale * 1.2).toFixed(2)}rem` }}>
         <span className="visually-hidden">Type the prompt text</span>
-        <div className="prompt-text prompt-overlay" aria-hidden="true">
+        <div ref={overlayRef} className="prompt-text prompt-overlay" aria-hidden="true">
           {promptTokens.map((token) => {
             if (token.type === "newline") {
               return <br key={`line-${token.start}`} />;
@@ -191,6 +232,7 @@ export const PromptCanvas = ({
           className={`typing-input typing-input-overlay ${phase === "finished" ? "is-finished" : ""}`}
           value={input}
           onChange={onInputChange}
+          onKeyDown={onInputKeyDown}
           placeholder={phase === "finished" ? "Start a new round to continue." : "Start typing..."}
           spellCheck={false}
         />
