@@ -269,6 +269,17 @@ export default function App() {
 
       <main className="workspace">
         <div className="main-column">
+          <StatRail
+            mode={settings.mode}
+            timed={timed}
+            elapsedSeconds={elapsedSeconds}
+            remainingSeconds={remainingSeconds}
+            grossWpm={liveMetrics.grossWpm}
+            netWpm={liveMetrics.netWpm}
+            tpm={liveMetrics.tpm}
+            accuracy={liveMetrics.accuracy}
+          />
+
           <PromptCanvas
             mode={settings.mode}
             prompt={promptBundle.text}
@@ -300,21 +311,9 @@ export default function App() {
           </div>
 
           {result && <ResultCard result={result} onRetry={retryPrompt} onNewPrompt={newPrompt} />}
+          <HistoryPanel history={history} streak={streak} />
         </div>
-
-        <StatRail
-          mode={settings.mode}
-          timed={timed}
-          elapsedSeconds={elapsedSeconds}
-          remainingSeconds={remainingSeconds}
-          grossWpm={liveMetrics.grossWpm}
-          netWpm={liveMetrics.netWpm}
-          tpm={liveMetrics.tpm}
-          accuracy={liveMetrics.accuracy}
-        />
       </main>
-
-      <HistoryPanel history={history} streak={streak} />
     </div>
   );
 }
