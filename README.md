@@ -1,6 +1,6 @@
 # Typist
 
-Minimalist but thoughtful typing speed test built with Bun, TypeScript, React, and Vite.
+Minimalist but thoughtful typing speed test.
 
 ## Modes
 
