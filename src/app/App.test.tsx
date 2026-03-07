@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
@@ -57,5 +57,23 @@ describe("App flow", () => {
 
     expect(textarea).toHaveValue("ab  ");
     expect(textarea).toHaveFocus();
+  });
+
+  it("extends classic prompt when the current text is fully consumed", async () => {
+    const { container } = render(<App />);
+    const textarea = screen.getByRole("textbox", { name: "Type the prompt text" });
+    const initialPrompt = container.querySelector(".prompt-overlay")?.textContent ?? "";
+
+    fireEvent.change(textarea, {
+      target: {
+        value: initialPrompt,
+      },
+    });
+
+    await waitFor(() => {
+      const extendedPrompt = container.querySelector(".prompt-overlay")?.textContent ?? "";
+      expect(extendedPrompt.length).toBeGreaterThan(initialPrompt.length);
+      expect(screen.getByText("active")).toBeInTheDocument();
+    });
   });
 });
