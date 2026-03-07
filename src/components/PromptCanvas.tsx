@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from "react";
 import type { AppMode, SessionPhase } from "../types";
 import { alignPromptInput } from "../lib/alignment";
@@ -79,6 +80,34 @@ const buildPromptTokens = (promptChars: string[]): PromptToken[] => {
   return tokens;
 };
 
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
+const mapInputCursorToPromptCursor = (
+  alignment: ReturnType<typeof alignPromptInput>,
+  inputCursor: number,
+  promptLength: number,
+): number => {
+  if (inputCursor <= 0) {
+    return 0;
+  }
+
+  let promptCursor = 0;
+  for (let index = 0; index < alignment.length; index += 1) {
+    const operation = alignment[index];
+    if (operation.inputIndex === null) {
+      continue;
+    }
+    if (operation.inputIndex >= inputCursor) {
+      break;
+    }
+    if (operation.promptIndex !== null) {
+      promptCursor = operation.promptIndex + 1;
+    }
+  }
+
+  return clamp(promptCursor, 0, promptLength);
+};
+
 export const PromptCanvas = ({
   mode,
   prompt,
@@ -92,6 +121,7 @@ export const PromptCanvas = ({
 }: PromptCanvasProps) => {
   const stageRef = useRef<HTMLLabelElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const [inputCursor, setInputCursor] = useState(0);
   const promptChars = Array.from(prompt);
   const promptTokens = buildPromptTokens(promptChars);
   const alignment = alignPromptInput(prompt, input, "input");
@@ -143,12 +173,9 @@ export const PromptCanvas = ({
   }
   trailingOverflowChars.reverse();
 
-  const currentIndex = promptStatuses.findIndex((status) => status === "");
-  if (currentIndex >= 0 && phase !== "finished") {
-    promptStatuses[currentIndex] = "is-current";
-  }
-
   const overflow = trailingOverflowChars.join("");
+  const promptCursor = mapInputCursorToPromptCursor(alignment, inputCursor, promptChars.length);
+  const activePromptIndex = phase === "finished" || promptCursor >= promptChars.length ? null : promptCursor;
 
   const syncHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -158,6 +185,7 @@ export const PromptCanvas = ({
     }
 
     const minHeight = Number.parseFloat(window.getComputedStyle(textarea).minHeight) || 0;
+    stage.style.height = "auto";
     textarea.style.height = "0px";
     const typedHeight = textarea.scrollHeight;
     const promptHeight = overlayRef.current?.scrollHeight ?? 0;
@@ -166,9 +194,21 @@ export const PromptCanvas = ({
     stage.style.height = `${nextHeight}px`;
   }, [textareaRef]);
 
+  const syncInputCursor = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    setInputCursor(textarea.selectionStart ?? textarea.value.length);
+  }, [textareaRef]);
+
   useEffect(() => {
     syncHeight();
   }, [fontScale, input, prompt, syncHeight]);
+
+  useEffect(() => {
+    syncInputCursor();
+  }, [input, syncInputCursor]);
 
   useEffect(() => {
     const onResize = () => {
@@ -179,6 +219,16 @@ export const PromptCanvas = ({
       window.removeEventListener("resize", onResize);
     };
   }, [syncHeight]);
+
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    onInputChange(event);
+    requestAnimationFrame(syncInputCursor);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    onInputKeyDown(event);
+    requestAnimationFrame(syncInputCursor);
+  };
 
   return (
     <section className="prompt-shell" onClick={onFocusRequest} aria-label="Typing prompt">
@@ -198,7 +248,10 @@ export const PromptCanvas = ({
               const promptIndex = token.start + offset;
               const statusClass = promptStatuses[promptIndex] ?? "";
               return (
-                <span className={`prompt-char ${statusClass}`} key={`${token.start}-${offset}`}>
+                <span
+                  className={`prompt-char ${statusClass} ${activePromptIndex === promptIndex ? "is-current" : ""}`}
+                  key={`${token.start}-${offset}`}
+                >
                   {toVisibleCharacter(char)}
                 </span>
               );
@@ -231,8 +284,12 @@ export const PromptCanvas = ({
           autoCorrect="off"
           className={`typing-input typing-input-overlay ${phase === "finished" ? "is-finished" : ""}`}
           value={input}
-          onChange={onInputChange}
-          onKeyDown={onInputKeyDown}
+          onChange={handleChange}
+          onClick={syncInputCursor}
+          onFocus={syncInputCursor}
+          onKeyDown={handleKeyDown}
+          onKeyUp={syncInputCursor}
+          onSelect={syncInputCursor}
           placeholder={phase === "finished" ? "Start a new round to continue." : "Start typing..."}
           spellCheck={false}
         />
