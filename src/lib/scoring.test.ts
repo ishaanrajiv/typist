@@ -137,4 +137,21 @@ describe("scoring", () => {
     expect(metrics.skippedChars).toBe(2);
     expect(metrics.correctChars).toBe(prompt.length - metrics.skippedChars);
   });
+
+  it("applies stricter net wpm penalties for skips and correction churn", () => {
+    const events: KeystrokeEvent[] = [
+      { expected: "a", actual: "a", timestampMs: 100, correct: true, corrected: false, index: 0 },
+      { expected: "b", actual: "x", timestampMs: 120, correct: false, corrected: false, index: 1 },
+      { expected: "b", actual: "", timestampMs: 140, correct: false, corrected: true, index: 1 },
+      { expected: "b", actual: "b", timestampMs: 160, correct: true, corrected: false, index: 1 },
+      { expected: "c", actual: "c", timestampMs: 180, correct: true, corrected: false, index: 2 },
+    ];
+
+    const metrics = calculateLiveMetrics("abcd", "abc", 60_000, events);
+    expect(metrics.grossWpm).toBeGreaterThan(0);
+    expect(metrics.skippedChars).toBe(1);
+    expect(metrics.wrongKeystrokes).toBe(1);
+    expect(metrics.backspaceCount).toBe(1);
+    expect(metrics.netWpm).toBeLessThan(metrics.grossWpm - 0.4);
+  });
 });

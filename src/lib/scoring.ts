@@ -114,6 +114,7 @@ const evaluateCharacters = (prompt: string, input: string): CharacterStats => {
 };
 
 const BACKSPACE_PENALTY_WEIGHT = 0.5;
+const NET_WPM_KEYSTROKE_WEIGHT = 0.75;
 
 const evaluateKeystrokes = (events: KeystrokeEvent[]): {
   backspaceCount: number;
@@ -161,7 +162,13 @@ export const calculateLiveMetrics = (
   const typedChars = characterStats.correctChars + characterStats.incorrectChars + characterStats.extraChars;
   const minutes = Math.max(elapsedMs / 60000, 1 / 60000);
   const grossWpm = (typedChars / 5) / minutes;
-  const errorPenalty = ((characterStats.incorrectChars + characterStats.extraChars) / 5) / minutes;
+  const weightedErrorChars =
+    characterStats.incorrectChars +
+    characterStats.extraChars +
+    characterStats.skippedChars +
+    (keystrokeStats.wrongKeystrokes + keystrokeStats.backspaceCount * BACKSPACE_PENALTY_WEIGHT) *
+      NET_WPM_KEYSTROKE_WEIGHT;
+  const errorPenalty = (weightedErrorChars / 5) / minutes;
   const netWpm = Math.max(0, grossWpm - errorPenalty);
   const accuracy = keystrokeStats.accuracy;
   const tpm = typedChars / minutes;

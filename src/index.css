@@ -263,7 +263,7 @@ textarea {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .prompt-word {
@@ -331,6 +331,7 @@ textarea {
   overflow-wrap: normal;
   word-break: normal;
   white-space: pre-wrap;
+  overflow: hidden;
   user-select: none;
 }
 

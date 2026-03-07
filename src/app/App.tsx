@@ -19,6 +19,7 @@ import { createPromptFromSettings, getDurationForMode, type PromptSettings } fro
 import { buildSessionResult, calculateLiveMetrics, diffInputEvents } from "../lib/scoring";
 import { appendResult, loadPersistedState, saveSettings } from "../lib/storage";
 import type { AppMode, AppSettings, SessionConfig, SessionPhase, SessionResult } from "../types";
+import { alignPromptInput } from "../lib/alignment";
 
 const buildSessionConfig = (settings: AppSettings, promptId: string): SessionConfig => ({
   mode: settings.mode,
@@ -30,6 +31,9 @@ const buildSessionConfig = (settings: AppSettings, promptId: string): SessionCon
 });
 
 const isTimedMode = (mode: AppMode): boolean => mode !== "learn";
+
+const isPromptConsumed = (prompt: string, input: string): boolean =>
+  alignPromptInput(prompt, input).every((operation) => operation.type !== "delete");
 
 export default function App() {
   const persisted = useMemo(() => loadPersistedState(), []);
@@ -217,6 +221,23 @@ export default function App() {
       finishSession();
     }
   }, [finishSession, input, phase, promptBundle.text, settings.mode]);
+
+  useEffect(() => {
+    if (settings.mode !== "classic" || phase !== "active") {
+      return;
+    }
+    if (input.length === 0 || !isPromptConsumed(promptBundle.text, input)) {
+      return;
+    }
+
+    setPromptBundle((current) => {
+      const next = createPromptFromSettings(settings);
+      return {
+        ...current,
+        text: `${current.text} ${next.text}`,
+      };
+    });
+  }, [input, phase, promptBundle.text, settings]);
 
   useEffect(() => {
     return () => {
