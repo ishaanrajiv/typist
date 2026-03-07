@@ -18,11 +18,19 @@ export type LiveMetrics = {
   netWpm: number;
   tpm: number;
   accuracy: number;
+  backspaceCount: number;
+  wrongKeystrokes: number;
+  correctKeystrokes: number;
   correctChars: number;
   incorrectChars: number;
   extraChars: number;
   skippedChars: number;
 };
+
+type CharacterStats = Pick<
+  LiveMetrics,
+  "correctChars" | "incorrectChars" | "extraChars" | "skippedChars"
+>;
 
 export const getCommonPrefixLength = (a: string, b: string): number => {
   const maxLength = Math.min(a.length, b.length);
@@ -73,7 +81,7 @@ export const diffInputEvents = (
   return events;
 };
 
-const evaluateCharacters = (prompt: string, input: string): Omit<LiveMetrics, "grossWpm" | "netWpm" | "tpm" | "accuracy"> => {
+const evaluateCharacters = (prompt: string, input: string): CharacterStats => {
   let correctChars = 0;
   let incorrectChars = 0;
   let extraChars = 0;
@@ -105,21 +113,61 @@ const evaluateCharacters = (prompt: string, input: string): Omit<LiveMetrics, "g
   };
 };
 
+const BACKSPACE_PENALTY_WEIGHT = 0.5;
+
+const evaluateKeystrokes = (events: KeystrokeEvent[]): {
+  backspaceCount: number;
+  wrongKeystrokes: number;
+  correctKeystrokes: number;
+  accuracy: number;
+} => {
+  let backspaceCount = 0;
+  let wrongKeystrokes = 0;
+  let correctKeystrokes = 0;
+
+  for (let index = 0; index < events.length; index += 1) {
+    const event = events[index];
+    if (event.corrected) {
+      backspaceCount += 1;
+      continue;
+    }
+    if (event.correct) {
+      correctKeystrokes += 1;
+      continue;
+    }
+    wrongKeystrokes += 1;
+  }
+
+  const weightedErrors = wrongKeystrokes + backspaceCount * BACKSPACE_PENALTY_WEIGHT;
+  const denominator = correctKeystrokes + weightedErrors;
+  const accuracy = denominator === 0 ? 100 : (correctKeystrokes / denominator) * 100;
+
+  return {
+    backspaceCount,
+    wrongKeystrokes,
+    correctKeystrokes,
+    accuracy,
+  };
+};
+
 export const calculateLiveMetrics = (
   prompt: string,
   input: string,
   elapsedMs: number,
+  events: KeystrokeEvent[] = [],
 ): LiveMetrics => {
   const characterStats = evaluateCharacters(prompt, input);
+  const keystrokeStats = evaluateKeystrokes(events);
   const typedChars = characterStats.correctChars + characterStats.incorrectChars + characterStats.extraChars;
   const minutes = Math.max(elapsedMs / 60000, 1 / 60000);
   const grossWpm = (typedChars / 5) / minutes;
   const errorPenalty = ((characterStats.incorrectChars + characterStats.extraChars) / 5) / minutes;
   const netWpm = Math.max(0, grossWpm - errorPenalty);
-  const accuracy = typedChars === 0 ? 100 : (characterStats.correctChars / typedChars) * 100;
+  const accuracy = keystrokeStats.accuracy;
   const tpm = typedChars / minutes;
 
   return {
+    ...keystrokeStats,
     ...characterStats,
     grossWpm: toFixed(grossWpm),
     netWpm: toFixed(netWpm),
@@ -268,7 +316,7 @@ export const buildSessionResult = (payload: {
   endedAt: string;
   insights?: Insight[];
 }): SessionResult => {
-  const live = calculateLiveMetrics(payload.prompt, payload.input, payload.elapsedMs);
+  const live = calculateLiveMetrics(payload.prompt, payload.input, payload.elapsedMs, payload.events);
   const timeline = buildPaceTimeline(payload.events, payload.elapsedMs);
   const consistency = calculateConsistency(timeline);
 

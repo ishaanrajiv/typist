@@ -93,8 +93,8 @@ export default function App() {
   }, [promptSettings, resetSessionState]);
 
   const liveMetrics = useMemo(
-    () => calculateLiveMetrics(promptBundle.text, input, Math.max(elapsedMs, 1)),
-    [elapsedMs, input, promptBundle.text],
+    () => calculateLiveMetrics(promptBundle.text, input, Math.max(elapsedMs, 1), sessionEvents),
+    [elapsedMs, input, promptBundle.text, sessionEvents],
   );
 
   const playTick = useCallback(() => {
