@@ -174,7 +174,8 @@ export const PromptCanvas = ({
   trailingOverflowChars.reverse();
 
   const overflow = trailingOverflowChars.join("");
-  const promptCursor = mapInputCursorToPromptCursor(alignment, inputCursor, promptChars.length);
+  const normalizedInputCursor = Math.min(inputCursor, input.length);
+  const promptCursor = mapInputCursorToPromptCursor(alignment, normalizedInputCursor, promptChars.length);
   const activePromptIndex = phase === "finished" || promptCursor >= promptChars.length ? null : promptCursor;
 
   const syncHeight = useCallback(() => {
@@ -205,10 +206,6 @@ export const PromptCanvas = ({
   useEffect(() => {
     syncHeight();
   }, [fontScale, input, prompt, syncHeight]);
-
-  useEffect(() => {
-    syncInputCursor();
-  }, [input, syncInputCursor]);
 
   useEffect(() => {
     const onResize = () => {

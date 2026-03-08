@@ -134,8 +134,8 @@ describe("scoring", () => {
 
     expect(metrics.incorrectChars).toBe(0);
     expect(metrics.extraChars).toBe(1);
-    expect(metrics.skippedChars).toBe(2);
-    expect(metrics.correctChars).toBe(prompt.length - metrics.skippedChars);
+    expect(metrics.skippedChars).toBe(0);
+    expect(metrics.correctChars + metrics.incorrectChars + metrics.extraChars).toBe(input.length);
   });
 
   it("applies stricter net wpm penalties for skips and correction churn", () => {
@@ -144,14 +144,22 @@ describe("scoring", () => {
       { expected: "b", actual: "x", timestampMs: 120, correct: false, corrected: false, index: 1 },
       { expected: "b", actual: "", timestampMs: 140, correct: false, corrected: true, index: 1 },
       { expected: "b", actual: "b", timestampMs: 160, correct: true, corrected: false, index: 1 },
-      { expected: "c", actual: "c", timestampMs: 180, correct: true, corrected: false, index: 2 },
+      { expected: "d", actual: "d", timestampMs: 180, correct: true, corrected: false, index: 3 },
+      { expected: "e", actual: "e", timestampMs: 200, correct: true, corrected: false, index: 4 },
     ];
 
-    const metrics = calculateLiveMetrics("abcd", "abc", 60_000, events);
+    const metrics = calculateLiveMetrics("abcde", "abde", 60_000, events);
     expect(metrics.grossWpm).toBeGreaterThan(0);
     expect(metrics.skippedChars).toBe(1);
     expect(metrics.wrongKeystrokes).toBe(1);
     expect(metrics.backspaceCount).toBe(1);
     expect(metrics.netWpm).toBeLessThan(metrics.grossWpm - 0.4);
+  });
+
+  it("keeps partial runs from being zeroed by untyped prompt tail", () => {
+    const metrics = calculateLiveMetrics("abcdef", "abc", 60_000, diffInputEvents("", "abc", "abcdef", 0));
+
+    expect(metrics.skippedChars).toBe(0);
+    expect(metrics.netWpm).toBeGreaterThan(0);
   });
 });

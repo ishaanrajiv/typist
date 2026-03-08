@@ -86,7 +86,9 @@ const evaluateCharacters = (prompt: string, input: string): CharacterStats => {
   let incorrectChars = 0;
   let extraChars = 0;
   let skippedChars = 0;
-  const operations = alignPromptInput(prompt, input);
+  // Align against the consumed prompt segment so unfinished tail text
+  // does not count as skipped errors during live/timed sessions.
+  const operations = alignPromptInput(prompt, input, "input");
 
   for (let index = 0; index < operations.length; index += 1) {
     const operation = operations[index];

@@ -211,35 +211,6 @@ export default function App() {
   }, [duration, finishSession, phase, startedAtPerfMs]);
 
   useEffect(() => {
-    if (settings.mode !== "learn" || phase === "finished") {
-      return;
-    }
-    if (input.length === 0) {
-      return;
-    }
-    if (input === promptBundle.text) {
-      finishSession();
-    }
-  }, [finishSession, input, phase, promptBundle.text, settings.mode]);
-
-  useEffect(() => {
-    if (settings.mode !== "classic" || phase !== "active") {
-      return;
-    }
-    if (input.length === 0 || !isPromptConsumed(promptBundle.text, input)) {
-      return;
-    }
-
-    setPromptBundle((current) => {
-      const next = createPromptFromSettings(settings);
-      return {
-        ...current,
-        text: `${current.text} ${next.text}`,
-      };
-    });
-  }, [input, phase, promptBundle.text, settings]);
-
-  useEffect(() => {
     return () => {
       audioContextRef.current?.close().catch(() => undefined);
     };
@@ -284,8 +255,73 @@ export default function App() {
       playTick();
     }
 
+    const sessionIsOrWillBeActive = phase === "active" || (phase === "idle" && addedChars > 0);
+    if (
+      settings.mode === "classic" &&
+      sessionIsOrWillBeActive &&
+      addedChars > 0 &&
+      next.length > 0 &&
+      isPromptConsumed(promptBundle.text, next)
+    ) {
+      setPromptBundle((current) => {
+        const extension = createPromptFromSettings(settings);
+        return {
+          ...current,
+          text: `${current.text} ${extension.text}`,
+        };
+      });
+    }
+
     setInput(next);
-  }, [elapsedMs, input, phase, playTick, promptBundle.text, startedAtPerfMs]);
+
+    if (settings.mode === "learn" && next.length > 0 && next === promptBundle.text && phase !== "finished") {
+      const totalEvents = eventDelta.length > 0 ? [...sessionEvents, ...eventDelta] : sessionEvents;
+      const finalizeElapsed =
+        referenceStart === null ? elapsedMs : Math.max(1, now - referenceStart);
+      const config = buildSessionConfig(settings, promptBundle.id);
+      const nowIso = new Date().toISOString();
+      const startedIso = startedAtIso ?? new Date(Date.now() - finalizeElapsed).toISOString();
+      const provisionalResult = buildSessionResult({
+        mode: settings.mode,
+        config,
+        prompt: promptBundle.text,
+        input: next,
+        events: totalEvents,
+        elapsedMs: finalizeElapsed,
+        startedAt: startedIso,
+        endedAt: nowIso,
+      });
+
+      const insights = generateLearnInsights({
+        prompt: promptBundle.text,
+        input: next,
+        events: totalEvents,
+        accuracy: provisionalResult.accuracy,
+        netWpm: provisionalResult.netWpm,
+      });
+
+      const nextResult = buildSessionResult({
+        mode: settings.mode,
+        config,
+        prompt: promptBundle.text,
+        input: next,
+        events: totalEvents,
+        elapsedMs: finalizeElapsed,
+        startedAt: startedIso,
+        endedAt: nowIso,
+        insights,
+      });
+
+      finalizingRef.current = true;
+      const persistedState = appendResult(nextResult);
+      setHistory(persistedState.history);
+      setStreak(persistedState.streak);
+      setElapsedMs(finalizeElapsed);
+      setPhase("finished");
+      setResult(nextResult);
+      setStartedAtPerfMs(null);
+    }
+  }, [elapsedMs, input, phase, playTick, promptBundle.id, promptBundle.text, sessionEvents, settings, startedAtIso, startedAtPerfMs]);
 
   const onInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     applyInputValue(event.target.value);
